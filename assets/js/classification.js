@@ -1,0 +1,205 @@
+var model = undefined;
+const raw_image = $("img[alt=Raw_Image]")[0];
+
+async function loadModel() {
+  /**
+   * Nạp mô hình
+   */
+  try {
+    switch (project.source) {
+      case "google":
+        model = await tf.loadLayersModel(project.model);
+        break;
+      case "custom":
+        model = await tf.loadLayersModel(project.model);
+        break;
+      default:
+        break;
+    }
+  } catch (e) {
+    thongBao(`Có lỗi khi tải mô hình. Thử lại !`, "error");
+    console.error(e.message);
+  }
+}
+
+function getImageSize() {
+  /**
+   * Xử lý image_size từ JSON
+   */
+  const [width, height] = project.image_size.split("x").map(Number);
+  return [width, height];
+}
+
+function loadImage(e) {
+  /**
+   * Upload ảnh từ máy & hiển thị lên DOM
+   * @param {string} e Sự kiện input tag thay đổi
+   */
+  let wrong = false;
+
+  // Đọc tệp ảnh đầu tiên
+  const in_file = e.target.files[0];
+  // Kiểm tra tệp có phải là ảnh hay không ?
+  if (in_file.type.split("/")[0] !== "image") {
+    thongBao("Tệp tải lên phải là một ảnh !", "warning");
+    wrong = true;
+  }
+
+  // Kiểm tra dung lượng tệp tải lên
+  if (in_file.size > 10000000) {
+    thongBao("Dung lượng của ảnh phải < 10MB !", "warning");
+    wrong = true;
+  }
+
+  // Nếu không có lỗi thì hiện ảnh vừa up, mở nút Dự đoán & ngược lại
+  if (!wrong) {
+    // Mở nút dự đoán
+    btnPred("enable");
+    // Hiển thị ảnh vừa upload
+    raw_image.src = URL.createObjectURL(in_file);
+    [raw_image.width, raw_image.height] = getImageSize();
+    // Khôi phục giá trị predResult mặc định
+    resetpredResult();
+  } else {
+    btnPred("disable");
+  }
+}
+
+async function preProcessingImage(project_name) {
+  /**
+   * Tiền xử lý ảnh đầu vào trước khi đưa vào mô hình
+   * @param {string} project_name Tên dự án
+   */
+  let offset = undefined;
+  let tensor = tf.browser
+    .fromPixels(raw_image)
+    .resizeNearestNeighbor(getImageSize())
+    .toFloat();
+  switch (project_name) {
+    case "mobilenet_v1":
+      // Scale ảnh về dạng -1 - 1
+      offset = tf.scalar(127.5);
+      // Chuẩn hóa giá trị pixel về trung tâm 0, chia cho 127 để scale về dạng -1 - 1 & mở rộng chiều của mảng
+      tensor = tensor.sub(offset).div(offset).expandDims(0);
+      break;
+    case "vgg16":
+      offset = tf.tensor1d([123.68, 116.779, 103.939]);
+      // Chuẩn hóa giá trị pixel bằng cách trừ giá trị pixel cho vector 1d, đảo ngược tensor & mở rộng chiều của mảng
+      tensor = tensor.sub(offset).reverse(2).expandDims(0);
+      break;
+    default:
+      tensor = tensor.expandDims(0);
+  }
+  console.log(`${project_name}: Input image tensor shape: ${tensor.shape}`);
+  return tensor;
+}
+
+async function beginPred() {
+  /**
+   * Dự đoán ảnh đầu vào & xuất kết quả dự đoán
+   */
+  // Tạo các mảng chứa kết quả đầu ra
+  // Ẩn predResult
+  predResult("hide");
+  // Kéo xuống & hiện loading spinner
+  scrollDown();
+  loadingSpinner("show");
+  // Tải mô hình
+  await loadModel();
+  // Tiền xử lý ảnh đầu vào
+  const tensor = await preProcessingImage(project.name);
+  // Bắt đầu dự đoán & xuất kết quả
+  const predictions = await model.predict(tensor).data();
+  // Mapping dạng key:value, sắp xếp kết quả dự đoán theo thứ tự giảm dần & chỉ lấy tối đa 5 kết quả đầu ra có acc cao nhất
+  const results = Array.from(predictions)
+    .map((p, i) => ({ acc: p, cls: classes[i] }))
+    .sort((a, b) => b.acc - a.acc)
+    .slice(0, max_results);
+  const results_label = results.map((r) => r.cls);
+  const results_acc = results.map((r) => (r.acc * 100).toFixed(2));
+  // Hiển thị nhãn, độ chính xác, mất mát sau khi dự đoán
+  $("topResult").text(results_label[0]);
+  $("topAcc").text(results_acc[0]);
+  $("topLoss").text((100 - results_acc[0]).toFixed(2));
+  // Ẩn loading spinner
+  loadingSpinner("hide");
+  // Hiện predResult
+  predResult("show");
+  // Tiếp tục di chuyển xuống cuối trang
+  scrollDown();
+  // Nạp data cho biểu đồ dự đoán
+  loadChart(results_label, results_acc);
+  // Hiển thị vùng chứa biểu đồ
+  chartZone("show");
+}
+
+function loadChart(results_label, results_acc) {
+  /**
+   * Hiển thị biểu đồ dự đoán
+   * @param {string} results_label: Mảng lưu trữ nhãn đầu ra dự đoán
+   * @param {string} results_acc: Mảng ghi nhận độ tin cậy của đầu ra
+   */
+  // Chart
+  let options = {
+    noData: {
+      text: "Không có dữ liệu !",
+      align: "center",
+      verticalAlign: "middle",
+    },
+    series: [{ name: "Accuracy", data: results_acc }],
+    chart: {
+      type: "bar",
+      height: 350,
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: "55%",
+        endingShape: "rounded",
+      },
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ["transparent"],
+    },
+    xaxis: {
+      categories: results_label,
+      title: {
+        text: "Labels",
+      },
+    },
+    yaxis: {
+      title: {
+        text: "% (Accuracy)",
+        fontFamily: "Arial",
+      },
+      min: 0,
+      max: 100,
+      decimalsInFloat: 0,
+    },
+    fill: {
+      opacity: 1,
+    },
+    tooltip: {
+      y: {
+        formatter: function (val) {
+          return val + "%";
+        },
+      },
+    },
+  };
+  // Bắt đầu vẽ biểu đồ
+  new ApexCharts($("#chart")[0], options).render();
+}
+
+$(document).ready(function () {
+  // Nếu có hành động upload ảnh thì thực thi loadImage
+  $("#inFile").on("change", loadImage);
+
+  // Nếu có hành động nhấn vào nút dự đoán thì bắt đầu dự đoán
+  $("#btnPred").on("click", beginPred);
+});

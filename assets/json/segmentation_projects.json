@@ -1,0 +1,10 @@
+[
+    {
+        "id": 0,
+        "name": "covid",
+        "model": "https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.25_224/model.json",
+        "classes": "https://raw.githubusercontent.com/xmartlabs/caffeflow/master/examples/imagenet/imagenet-classes.txt",
+        "description": "Mô hình phân đoạn viêm phổi do Covid dựa trên ảnh chụp X-ray",
+        "image_size": "224x224"
+    }
+]

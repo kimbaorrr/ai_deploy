@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link href="/assets/css/style.min.css" rel="stylesheet">
+    <meta name="robots" content="none">
+    <meta name="description" content="">
+    <link rel="stylesheet" href="https://jsdelivr.b-cdn.net/npm/apexcharts@3.50.0/dist/apexcharts.min.css">
+    <link rel="stylesheet" href="https://jsdelivr.b-cdn.net/npm/sweetalert2@11.12.2/dist/sweetalert2.min.css">
+    <script src="https://jsdelivr.b-cdn.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="/assets/js/common.js" fetchpriority="high"></script>
+</head>
+
+<body class="flex justify-center min-h-screen antialiased text-black bg-gray-100 dark:bg-gray-900 dark:text-white">
+    <div class="container max-w-3xl px-3 mx-auto space-y-2 text-center md:max-w-xl sm:px-6 xl:px-0">
+        <header>
+            <h1 class="text-3xl font-bold text-red-600 dark:text-red-500 pt-0.5"></h1>
+        </header>
+
+        <footer class="pb-1 text-sm text-gray-500 dark:text-gray-400 md:pb-2">
+            <p>&copy; 2024 BaoIT. All right reserved.</p>
+        </footer>
+
+        <!--Input for Pred-->
+        <div class="grid grid-cols-4 gap-2 md:pb-1">
+            <input
+                class="block w-full col-span-3 text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                id="inFile" type="file">
+            <button type="button" id="btnPred" disabled
+                class="col-span-1 p-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                Dự đoán
+            </button>
+        </div>
+
+        <!--Raw Image-->
+        <div class="flex justify-center items-start w-full md:h-[26rem] h-[18rem] border-2 rounded-lg shadow-sm">
+            <img class="object-cover w-full h-full"
+                src="https://t4.ftcdn.net/jpg/04/73/25/49/360_F_473254957_bxG9yf4ly7OBO5I0O5KABlN930GwaMQz.jpg"
+                alt="Raw_Image">
+        </div>
+
+        <!--Loading Spinner-->
+        <div role="status" class="hidden w-full pt-2" id="loadingSpinner">
+            <svg aria-hidden="true" class="w-8 h-8 mx-auto text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+                viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                    fill="currentColor" />
+                <path
+                    d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                    fill="currentFill" />
+            </svg>
+            <span class="sr-only">Loading...</span>
+        </div>
+
+        <!--Result of Pred-->
+        <p id="predResult" class="w-full py-0 text-lg font-bold text-red-600 dark:text-red-500 md:pt-2">Giá trị dự đoán:
+            <topResult>N/A</topResult> (Acc: <topAcc>0.0</topAcc>% | Loss: <topLoss>0.0</topLoss>%)</p>
+
+        <!--Chart Zone-->
+        <div class="hidden" id="chartZone" data-accordion="collapse">
+            <!--HR Line XemThem-->
+            <div class="grid items-center grid-cols-3 space-y-2">
+                <hr class="h-px col-span-1 mt-1.5 bg-gray-500 border-0 dark:bg-gray-700">
+                <div class="col-span-1 mb-2">
+                    <a class="flex items-center justify-center text-sm text-gray-500" href="#"
+                        data-accordion-target="#chart" aria-expanded="false" aria-controls="chart">
+                        Chi tiết dự đoán
+                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="ml-1"
+                            viewBox="0 0 16 16" data-accordion-icon>
+                            <path
+                                d="M3.204 5h9.592L8 10.481zm-.753.659 4.796 5.48a1 1 0 0 0 1.506 0l4.796-5.48c.566-.647.106-1.659-.753-1.659H3.204a1 1 0 0 0-.753 1.659" />
+                        </svg>
+                    </a>
+                </div>
+                <hr class="h-px col-span-1 bg-gray-500 border-0 dark:bg-gray-700">
+            </div>
+            <!--Draw Chart-->
+            <div id="chart" class="hidden mt-2"></div>
+        </div>
+    </div>
+
+    <!--Toggle Color Theme-->
+    <button id="darkModeToggle"
+        class="fixed p-2 bg-gray-200 rounded-lg bottom-4 right-4 dark:bg-gray-800 focus:outline-none">
+        <svg id="lightModeIcon" class="w-6 h-6 text-gray-800 dark:hidden" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m8-9h1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 5a7 7 0 100 14 7 7 0 000-14z">
+            </path>
+        </svg>
+        <svg id="darkModeIcon" class="hidden w-6 h-6 text-gray-200 dark:block" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m8-9h1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 5a7 7 0 100 14 7 7 0 000-14z">
+            </path>
+        </svg>
+    </button>
+
+    <script src="https://jsdelivr.b-cdn.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+    <script src="https://jsdelivr.b-cdn.net/npm/apexcharts@3.50.0/dist/apexcharts.min.js"></script>
+    <script src="https://jsdelivr.b-cdn.net/npm/sweetalert2@11.12.2/dist/sweetalert2.all.min.js"></script>
+    <script src="https://jsdelivr.b-cdn.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+    <script src="/assets/js/classification.js"></script>
+</body>
+
+</html>
