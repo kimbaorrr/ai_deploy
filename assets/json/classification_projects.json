@@ -3,18 +3,19 @@
         "id": 0,
         "name": "mobilenet_v1",
         "model": "https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.25_224/model.json",
-        "classes": "https://raw.githubusercontent.com/xmartlabs/caffeflow/master/examples/imagenet/imagenet-classes.txt",
+        "classes": "/assets/models/classification/imagenet-classes.txt",
         "description": "Mô hình phân loại hình ảnh MobileNet V1",
         "image_size": "224x224",
         "source": "google"
     },
     {
         "id": 1,
-        "name": "vgg16",
-        "model": "https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.75_224/model.json",
-        "classes": "https://raw.githubusercontent.com/xmartlabs/caffeflow/master/examples/imagenet/imagenet-classes.txt",
-        "description": "Mô hình phân loại hình ảnh VGG16",
+        "name": "densenet_121",
+        "model": "/assets/models/classification/densenet_121/model.json",
+        "classes": "/assets/models/classification/imagenet-classes.txt",
+        "description": "Mô hình phân loại hình ảnh Densenet 121",
         "image_size": "224x224",
         "source": "google"
     }
+
 ]

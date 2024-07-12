@@ -10,10 +10,8 @@ async function loadModel() {
       case "google":
         model = await tf.loadLayersModel(project.model);
         break;
-      case "custom":
-        model = await tf.loadLayersModel(project.model);
-        break;
       default:
+        model = await tf.loadLayersModel(project.model);
         break;
     }
   } catch (e) {
@@ -71,25 +69,29 @@ async function preProcessingImage(project_name) {
    * @param {string} project_name Tên dự án
    */
   let offset = undefined;
+  // Tạo tensor từ ảnh đầu vào & resize kíc thước ảnh về 224 x 224
   let tensor = tf.browser
     .fromPixels(raw_image)
     .resizeNearestNeighbor(getImageSize())
     .toFloat();
   switch (project_name) {
     case "mobilenet_v1":
-      // Scale ảnh về dạng -1 - 1
-      offset = tf.scalar(127.5);
-      // Chuẩn hóa giá trị pixel về trung tâm 0, chia cho 127 để scale về dạng -1 - 1 & mở rộng chiều của mảng
-      tensor = tensor.sub(offset).div(offset).expandDims(0);
+      // Scale ảnh về dạng 0 - 1
+      offset = tf.scalar(255.0);
+      // Chuẩn hóa giá trị pixel
+      tensor = tensor.div(offset);
       break;
-    case "vgg16":
-      offset = tf.tensor1d([123.68, 116.779, 103.939]);
-      // Chuẩn hóa giá trị pixel bằng cách trừ giá trị pixel cho vector 1d, đảo ngược tensor & mở rộng chiều của mảng
-      tensor = tensor.sub(offset).reverse(2).expandDims(0);
+    case "densenet_121":
+      // Scale ảnh về dạng 0 - 1
+      offset = tf.scalar(255.0);
+      // Chuẩn hóa giá trị pixel
+      tensor = tensor.div(offset);
       break;
     default:
-      tensor = tensor.expandDims(0);
+      break;
   }
+  // Mở rộng chiều của mảng dạng [batch_size, width, height, channels]
+  tensor = tensor.expandDims(0);
   console.log(`${project_name}: Input image tensor shape: ${tensor.shape}`);
   return tensor;
 }
