@@ -1,96 +1,62 @@
-function calculatePercentile(tensor, percentile) {
-  if (percentile < 0 || percentile > 100) {
-    throw new Error("Percentile must be between 0 and 100");
-  }
-
-  // Sort the tensor
-  const sorted = tensor.sort();
-
-  // Determine the index for the desired percentile
-  const index = tf
-    .scalar(percentile / 100)
-    .mul(tf.scalar(sorted.size - 1))
-    .dataSync()[0];
-
-  // Get the value at the index (linear interpolation if necessary)
-  const lowerIndex = Math.floor(index);
-  const upperIndex = Math.ceil(index);
-  if (lowerIndex === upperIndex) {
-    return sorted.gather(lowerIndex).dataSync()[0];
-  } else {
-    const lowerValue = sorted.gather(lowerIndex).dataSync()[0];
-    const upperValue = sorted.gather(upperIndex).dataSync()[0];
-    const weight = index - lowerIndex;
-    return lowerValue * (1 - weight) + upperValue * weight;
-  }
-}
-
-// Function to clip a tensor at given lower and upper percentile values
-function clipTensor(tensor, lowerPercentile, upperPercentile) {
-  const lowerValue = calculatePercentile(tensor, lowerPercentile);
-  const upperValue = calculatePercentile(tensor, upperPercentile);
-  return tensor.clipByValue(lowerValue, upperValue);
-}
-
-function minMaxScaler(tensor, minRange = 0, maxRange = 1) {
-  const minTensor = tensor.min();
-  const maxTensor = tensor.max();
-  const scaledTensor = tensor
-    .sub(minTensor)
-    .div(maxTensor.sub(minTensor))
-    .mul(tf.scalar(maxRange - minRange))
-    .add(tf.scalar(minRange));
-  return scaledTensor;
-}
-
-function rgbToGrayscale(tensor) {
-  // Check if the tensor has the correct shape
-  if (tensor.shape.length !== 3 || tensor.shape[2] !== 3) {
-    throw new Error("Input tensor must have shape [height, width, 3]");
-  }
-
-  // Extract the R, G, B components
-  const [red, green, blue] = tf.split(tensor, 3, 2);
-
-  // Apply the grayscale conversion formula
-  const grayscale = red.mul(0.299).add(green.mul(0.587)).add(blue.mul(0.114));
-
-  // Reshape the grayscale tensor to have shape [height, width, 1]
-  return grayscale;
-}
-
 function preProcessingImage(project_name) {
-  let tensor = undefined;
+  // Tạo giá trị 255.0 để chuẩn hóa pixel
+  let offset = tf.scalar(255.0);
+  // Đọc ảnh grayscale & Resize ảnh
+  let tensor = tf.browser
+    .fromPixels(raw_image, 1)
+    .resizeNearestNeighbor(getImageSize())
+    .toFloat();
   switch (project_name) {
     case "covid":
-      // Resize ảnh
-      tensor = tf.browser
-        .fromPixels(raw_image)
-        .resizeNearestNeighbor(getImageSize())
-        .toFloat();
-      // Dùng percentile min 2% max 98% để loại bỏ giá trị ngoại lai 2 đầu
-      //tensor = clipTensor(tensor, 2, 98);
-      // MinMax Scaler
-      tensor = minMaxScaler(tensor);
-      // Chuyển ảnh về dạng grayscale
-      tensor = rgbToGrayscale(tensor);
+      // Chuẩn hóa pixel ảnh về dạng [0-1]
+      tensor = tensor.div(offset);
       // Mở rộng chiều của mảng
       tensor = tensor.expandDims(0);
       break;
     default:
+      tensor = tensor.expandDims(0);
       break;
   }
-  console.log(tensor.shape);
+  console.log(`${project_name}: Input image tensor shape: ${tensor.shape}`);
   return tensor;
 }
 
 async function beginPred() {
+  $("canvas").empty();
   // Tải mô hình
   await loadModel();
   // Tiền xử lý ảnh đầu vào
-  const tensor = await preProcessingImage(project.name);
+  const img_tensor = await preProcessingImage(project.name);
   // Bắt đầu dự đoán & xuất kết quả
-  const prediction = await model.predict(tensor);
+  const predictions = model.predict(img_tensor);
+  const results = await predictions.dataSync();
+  // Lấy thông tin mảng đầu ra để tạo mask RGBA
+  const [height, width, channels] = predictions.shape.slice(1);
+  // Tạo mask RGBA 
+  const mask = new Uint8ClampedArray(height * width * channels);
+  // Trích xuất từng channel & thêm vào mask
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * channels;
+    const r = results[idx + 0] * 255; // Ground glass
+    const g = results[idx + 1] * 255; // Consolidation
+    const b = results[idx + 2] * 255; // Lung other
+    const alpha = 255; // Alpha channel
+
+    mask[i * 4 + 0] = r;
+    mask[i * 4 + 1] = g;
+    mask[i * 4 + 2] = b;
+    mask[i * 4 + 3] = alpha;
+  }
+  // Vẽ mask lên canvas tag
+  const canvas = $("canvas")[0];
+  canvas.width = width
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  const image_data = new ImageData(mask, width, height);
+  ctx.putImageData(image_data, 0, 0);
+  // Nhân bản mask & thêm vào img tag mới
+  const pred_mask = $("#predMask")[0];
+  pred_mask.src = canvas.toDataURL();
 }
 
 $(document).ready(function () {

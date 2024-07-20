@@ -70,7 +70,12 @@
             </svg>
             <span class="sr-only">Loading...</span>
         </div>
-
+        <!--Raw Image-->
+        <div class="flex justify-center items-start w-full md:h-[26rem] h-[18rem] border-2 rounded-lg shadow-sm">
+            <canvas class="hidden"></canvas>
+            <img src="" id="predMask" alt="Pred_Mask" class="object-cover w-full h-full">
+        </div>
+        
         <!--Pred detail Zone-->
         <div class="" id="predDetail" data-accordion="collapse">
             <!--HR Line Chitietdudoan-->
@@ -89,9 +94,9 @@
                 </div>
                 <hr class="h-px col-span-1 bg-gray-500 border-0 dark:bg-gray-700">
             </div>
-            <canvas id="canvas"></canvas>
+            
             <!--Mask Images Carousel-->
-            <div id="maskCarousel" class="relative w-full" data-carousel="static">
+            <div id="maskCarousel" class="relative hidden w-full" data-carousel="static">
                 <!-- Carousel wrapper -->
                 <div class="relative h-56 overflow-hidden rounded-lg md:h-96">
                     <!-- Item 1 -->

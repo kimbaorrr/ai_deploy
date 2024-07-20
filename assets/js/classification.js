@@ -44,9 +44,9 @@ async function beginPred() {
   // Tải mô hình
   await loadModel();
   // Tiền xử lý ảnh đầu vào
-  const tensor = await preProcessingImage(project.name);
+  const img_tensor = await preProcessingImage(project.name);
   // Bắt đầu dự đoán & xuất kết quả
-  const predictions = await model.predict(tensor).dataSync();
+  const predictions = await model.predict(img_tensor).dataSync();
   // Mapping dạng key:value, sắp xếp kết quả dự đoán theo thứ tự giảm dần & chỉ lấy tối đa 5 kết quả đầu ra có acc cao nhất
   const results = Array.from(predictions)
     .map((p, i) => ({ acc: p, cls: classes[i] }))
