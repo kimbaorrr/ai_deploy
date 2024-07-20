@@ -1,68 +1,3 @@
-var model = undefined;
-const raw_image = $("img[alt=Raw_Image]")[0];
-
-async function loadModel() {
-  /**
-   * Nạp mô hình
-   */
-  try {
-    switch (project.source) {
-      case "google":
-        model = await tf.loadLayersModel(project.model);
-        break;
-      default:
-        model = await tf.loadLayersModel(project.model);
-        break;
-    }
-  } catch (e) {
-    thongBao(`Có lỗi khi tải mô hình. Thử lại !`, "error");
-    console.error(e.message);
-  }
-}
-
-function getImageSize() {
-  /**
-   * Xử lý image_size từ JSON
-   */
-  const [width, height] = project.image_size.split("x").map(Number);
-  return [width, height];
-}
-
-function loadImage(e) {
-  /**
-   * Upload ảnh từ máy & hiển thị lên DOM
-   * @param {string} e Sự kiện input tag thay đổi
-   */
-  let wrong = false;
-
-  // Đọc tệp ảnh đầu tiên
-  const in_file = e.target.files[0];
-  // Kiểm tra tệp có phải là ảnh hay không ?
-  if (in_file.type.split("/")[0] !== "image") {
-    thongBao("Tệp tải lên phải là một ảnh !", "warning");
-    wrong = true;
-  }
-
-  // Kiểm tra dung lượng tệp tải lên
-  if (in_file.size > 10000000) {
-    thongBao("Dung lượng của ảnh phải < 10MB !", "warning");
-    wrong = true;
-  }
-
-  // Nếu không có lỗi thì hiện ảnh vừa up, mở nút Dự đoán & ngược lại
-  if (!wrong) {
-    // Mở nút dự đoán
-    btnPred("enable");
-    // Hiển thị ảnh vừa upload
-    raw_image.src = URL.createObjectURL(in_file);
-    [raw_image.width, raw_image.height] = getImageSize();
-    // Khôi phục giá trị predResult mặc định
-    resetpredResult();
-  } else {
-    btnPred("disable");
-  }
-}
-
 async function preProcessingImage(project_name) {
   /**
    * Tiền xử lý ảnh đầu vào trước khi đưa vào mô hình
@@ -127,12 +62,12 @@ async function beginPred() {
   loadingSpinner("hide");
   // Hiện predResult
   predResult("show");
-  // Tiếp tục di chuyển xuống cuối trang
-  scrollDown();
   // Nạp data cho biểu đồ dự đoán
   loadChart(results_label, results_acc);
   // Hiển thị vùng chứa biểu đồ
-  chartZone("show");
+  predDetail("show");
+  // Tiếp tục di chuyển xuống cuối trang
+  scrollDown();
 }
 
 function loadChart(results_label, results_acc) {

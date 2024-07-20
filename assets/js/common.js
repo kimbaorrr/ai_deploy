@@ -52,39 +52,6 @@ async function getProject(model_type, project_id) {
   }
 }
 
-async function getClasses() {
-  /**
-   * Lấy thông tin các nhãn của mô hình
-   */
-  if (project.classes && project.classes !== "N/A") {
-    try {
-      // Nếu đã có nhãn tại máy Client thì không cần get lại JSON và ngược lại
-      let storage_classes = getFromStorage(`${project.name}_classes`);
-      if (storage_classes === null || !storage_classes) {
-        const response = await fetch(project.classes);
-        const data = await response.text();
-        // Cắt mỗi nhãn nằm trên một dòng
-        const lines = data.split("\n");
-        // Lặp qua từng nhãn & thêm chúng vào mảng classes
-        lines.forEach((line, index) => {
-          classes[index] = line.trim();
-        });
-        // Lưu nhãn vào kho lưu trữ của Client
-        putInStorage(`${project.name}_classes`, JSON.stringify(classes));
-      } else {
-        // Nếu đã có nhãn tại máy Client thì không cần get lại JSON
-        classes = JSON.parse(storage_classes);
-      }
-      // Chỉ lấy tối đa 5 nhãn có accuracy cao nhất
-      max_results = Math.min(Object.keys(classes).length, 5);
-    } catch (e) {
-      errorHandler("Không thể tải thông tin các nhãn. Thử lại !", e);
-    }
-  } else {
-    errorHandler("Không thể tải thông tin các nhãn. Thử lại !", e);
-  }
-}
-
 function loadingSpinner(status) {
   /**
    * Đổi trạng thái Loading Spinner
@@ -102,13 +69,13 @@ function scrollDown() {
   $("html, body").animate({ scrollTop: x + 600 });
 }
 
-function chartZone(status) {
+function predDetail(status) {
   /**
-   * Đổi trạng thái hiển thị phần tử ChartZone
+   * Đổi trạng thái hiển thị phần tử predDetail
    * @param {string} status: Trạng thái hiển thị [show, hide]
    */
-  const chartZone = $("#chartZone");
-  status === "show" ? chartZone.show() : chartZone.hide();
+  const predDetail = $("#predDetail");
+  status === "show" ? predDetail.show() : predDetail.hide();
 }
 
 function predResult(status) {
@@ -142,13 +109,13 @@ function btnPred(status) {
 
 function resetpredResult() {
   /**
-   * Khôi phục giá trị mặc định phần tử predResult, đồng thời ẩn ChartZone
+   * Khôi phục giá trị mặc định phần tử predResult, đồng thời ẩn predDetail
    */
   const predResult = $("#predResult");
   predResult.find("#topResult").text("N/A");
   predResult.find("#topAcc").text("0.0");
   predResult.find("#topLoss").text("0.0");
-  chartZone("hide");
+  predDetail("hide");
 }
 
 async function loadDOM() {
@@ -194,6 +161,14 @@ function thongBao(message, status, timer = 2200) {
 }
 
 $(document).ready(async () => {
+  // Tải DOM
   await loadDOM();
+  // Tắt nút Dự đoán
   btnPred("disable");
+  $("#predDetail a").on("click", function () {
+    /**
+     * Kéo màn hình xuống dưới khi nhấn nút ChiTietDuDoan
+     */
+    scrollDown();
+  })
 });
