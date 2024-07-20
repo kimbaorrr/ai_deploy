@@ -3,7 +3,7 @@
         "id": 0,
         "name": "covid",
         "model": "/assets/models/segmentation/covid/model.json",
-        "classes": "https://raw.githubusercontent.com/xmartlabs/caffeflow/master/examples/imagenet/imagenet-classes.txt",
+        "classes": "/assets/models/segmentation/covid/classes.txt",
         "description": "Mô hình phân đoạn viêm phổi do Covid dựa trên ảnh chụp CT",
         "image_size": "224x224"
     }
